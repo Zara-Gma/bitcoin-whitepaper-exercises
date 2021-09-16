@@ -3,7 +3,7 @@
 var path = require("path");
 var fs = require("fs");
 var crypto = require("crypto");
-var openpgp = require("openpgp");
+var openpgp = require("openpgp"); //external library
 
 const KEYS_DIR = path.join(__dirname,"keys");
 const PRIV_KEY_TEXT = fs.readFileSync(path.join(KEYS_DIR,"priv.pgp.key"),"utf8");
@@ -45,8 +45,14 @@ async function addPoem() {
 	var transactions = [];
 
 	// TODO: add poem lines as authorized transactions
-	// for (let line of poem) {
-	// }
+	for (let line of poem) {
+		let tr = createTransaction(line)
+		tr = await authorizeTransaction(tr);
+		console.log(tr);
+		let verify = await verifySignature(tr.signature,tr.pubKey);
+		console.log("Status of Transaction:" + verify);
+		transactions.push(tr);
+	}
 
 	var bl = createBlock(transactions);
 
@@ -56,6 +62,7 @@ async function addPoem() {
 }
 
 async function checkPoem(chain) {
+	// please wait until you get this back
 	console.log(await verifyChain(chain));
 }
 
@@ -72,10 +79,30 @@ function createBlock(data) {
 	return bl;
 }
 
+// make create transaction function
+// should have a data field
+// needs a hash field with value returned
+// from transactionHash
+
+function createTransaction(data) {
+	var tr = {
+		data,
+	}
+
+	tr.hash = transactionHash(tr)
+	return 
+}
+
 function transactionHash(tr) {
 	return crypto.createHash("sha256").update(
 		`${JSON.stringify(tr.data)}`
 	).digest("hex");
+}
+
+async function authorizeTransaction(tr) {
+	tr.pubKey = PUB_KEY_TEXT;
+	tr.signature = await createSignature(tr.hash, PRIV_KEY_TEXT)
+	return tr;
 }
 
 async function createSignature(text,privKey) {
